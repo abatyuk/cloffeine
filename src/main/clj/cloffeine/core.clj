@@ -1,5 +1,6 @@
 (ns cloffeine.core
-  (:import (com.github.benmanes.caffeine.cache Caffeine)))
+  (:import (com.github.benmanes.caffeine.cache Caffeine CacheLoader)
+           (java.util.function Function)))
 
 
 (defrecord CacheSettings
@@ -19,6 +20,17 @@
                    :m java.util.concurrent.TimeUnit/MINUTES
                    :h java.util.concurrent.TimeUnit/HOURS
                    :d java.util.concurrent.TimeUnit/DAYS))
+
+(defn ifn-to-loader
+  [ifn]
+  (reify com.github.benmanes.caffeine.cache.CacheLoader
+    (load [this key]
+      (do (println key)
+        (ifn key)))))
+
+(defn ifn-to-function
+  [ifn] (reify java.util.function.Function
+          (apply [this t] (ifn t))))
 
 (defn make-builder
   [^CacheSettings settings]
@@ -44,17 +56,24 @@
       [size (:maximumSize mergedSettings)]
       (.maximumSize builder (int size)))))
 
-(defn make-cache [^CacheSettings settings]
-  (when-let [builder (make-builder settings)]
-    (.build builder)))
+(defn make-cache
+  ([^CacheSettings settings]
+   (when-let [builder (make-builder settings)]
+     (.build builder)))
+  ([^CacheSettings settings loader]
+   (when-let [builder (make-builder settings)]
+     (.build builder (ifn-to-function loader)))))
+
 
 (defn put
   [^com.github.benmanes.caffeine.cache.Cache cache key value]
   (.put cache key value))
 
+(defn get-if-present [^com.github.benmanes.caffeine.cache.Cache cache key] (.getIfPresent cache key))
+
 (defn get
-  [^com.github.benmanes.caffeine.cache.Cache cache key]
-  (.getIfPresent cache key))
+  ([^com.github.benmanes.caffeine.cache.LoadingCache cache key] (.get cache key))
+  ([^com.github.benmanes.caffeine.cache.Cache cache key ifn] (.get cache key (ifn-to-function ifn))))
 
 (defn invalidate
   [^com.github.benmanes.caffeine.cache.Cache cache key]

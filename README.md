@@ -7,7 +7,7 @@ Usage:
 (def settings (cc/map->CacheSettings {:maximumSize 5 :expireAfterWrite 3}))
 (def cache (cc/make-cache settings))
 (cc/put cache :a 1)
-(cc/get cache :a)
+(cc/get-if-present cache :a)
 ```
 
 Todo:
