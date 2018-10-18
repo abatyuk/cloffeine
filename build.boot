@@ -1,14 +1,14 @@
 (set-env! :dependencies
-          '[[org.clojure/clojure "1.8.0"]
-            [boot/core "2.5.5" :scope "provided"]
-            [adzerk/boot-test "1.1.0" :scope "test"]
+          '[[org.clojure/clojure "1.9.0"]
+            [boot/core "2.8.2" :scope "provided"]
+            [adzerk/boot-test "1.2.0" :scope "test"]
             [org.clojure/test.check "0.9.0" :scope "test"]
-            [tolitius/boot-check "0.1.1" :scope "test"]
-            [com.github.ben-manes.caffeine/caffeine "2.2.3"]]
+            [tolitius/boot-check "0.1.11" :scope "test"]
+            [com.github.ben-manes.caffeine/caffeine "2.6.2"]]
 
 
-          :source-paths #{"src/main/clj" "src/main/cljc"}
-          :resource-paths #{"src/test/clj" "src/main/cljs" "src/test/cljs" "src/test/cljc" "src/main/resources"})
+          :source-paths #{"src/main/clj"}
+          :resource-paths #{"src/test/clj"})
 
 (require '[adzerk.boot-test :refer [test]])
 (require '[tolitius.boot-check :as check])
