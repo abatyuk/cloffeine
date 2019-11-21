@@ -1,0 +1,10 @@
+language: clojure
+lein: 2.6.1 # version 2 and up
+jdk:
+- openjdk8
+after_script:
+  - bash -ex test/coveralls.sh
+script: lein eftest
+notifications:
+  recipients:
+    - ido@appsflyer.com

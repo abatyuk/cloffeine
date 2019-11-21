@@ -97,3 +97,4 @@ crashlytics-build.properties
 fabric.properties
 
 .clj-kondo/.cache
+*.png
