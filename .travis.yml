@@ -4,7 +4,12 @@ jdk:
 - openjdk8
 after_script:
   - bash -ex test/coveralls.sh
-script: lein eftest
+jobs:
+    include:
+        - stage: lint
+          script: lein clj-kondo --lint src test --cache false
+        - stage: test
+          script: lein eftest
 notifications:
   recipients:
     - ido@appsflyer.com

@@ -1,8 +1,6 @@
 
 # Created by https://www.gitignore.io/api/leiningen,clojure,maven,jetbrains
 
-project.clj
-
 ### Leiningen ###
 pom.xml
 pom.xml.asc
