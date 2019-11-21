@@ -1,6 +1,5 @@
 language: clojure
 lein: 2.6.1 # version 2 and up
-before_install: pwd && ls
 jdk:
 - openjdk8
 after_script:
