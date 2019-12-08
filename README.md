@@ -4,6 +4,8 @@ Simple clojure wrapper around https://github.com/ben-manes/caffeine cache.
 
 [![Clojars Project](https://img.shields.io/clojars/v/com.appsflyer/cloffeine.svg)](https://clojars.org/com.appsflyer/cloffeine)
 
+[![Coverage Status](https://coveralls.io/repos/github/AppsFlyer/cloffeine/badge.svg?branch=master)](https://coveralls.io/github/AppsFlyer/cloffeine?branch=master)
+
 Usage:
 ------
 Manual loading:
