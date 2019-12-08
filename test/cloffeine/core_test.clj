@@ -5,8 +5,7 @@
             [cloffeine.loading-cache :as loading-cache]
             [cloffeine.async-loading-cache :as async-loading-cache]
             [clojure.test :refer [deftest is testing]]
-            [promesa.core :as p])
-  (:import [com.google.common.testing FakeTicker]))
+            [promesa.core :as p]))
 
 (deftest manual
   (let [cache (cache/make-cache)]
