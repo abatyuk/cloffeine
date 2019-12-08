@@ -10,7 +10,9 @@
 
 (deftest manual
   (let [cache (cache/make-cache)]
+    (is (= 0 (.estimatedSize cache)))
     (cache/put! cache :key :v)
+    (is (= 1 (.estimatedSize cache)))
     (is (= :v (cache/get cache :key name)))
     (cache/invalidate! cache :key)
     (is (= "key" (cache/get cache :key name)))))
@@ -20,12 +22,18 @@
         cl (common/reify-cache-loader (fn [k]
                                         (swap! loads inc)
                                         (name k)))
-        lcache (loading-cache/make-cache cl)]
+        lcache (loading-cache/make-cache cl {:recordStats true})]
     (loading-cache/put! lcache :key :v)
     (is (= :v (loading-cache/get lcache :key)))
+    (= 1 (:hitCount (common/stats lcache)))
+    (= 1 (:requestCount (common/stats lcache)))
     (is (= 0 @loads))
     (loading-cache/invalidate! lcache :key)
     (is (= "key" (loading-cache/get lcache :key)))
+    (= 2 (:requestCount (common/stats lcache)))
+    (= 1 (:loadCount (common/stats lcache)))
+    (= 0.5 (:hitRate (common/stats lcache)))
+    (= 0.5 (:missRate (common/stats lcache)))
     (is (= 1 @loads))
     (is (= "key" (loading-cache/get lcache :key name)))
     (is (= 1 @loads))

@@ -1,4 +1,4 @@
-(defproject cloffeine "0.1.0" 
+(defproject com.appsflyer/cloffeine "0.1.1" 
   :description "A warpper over https://github.com/ben-manes/caffeine"
   :url "https://github.com/AppsFlyer/cloffeine"
   :license {:name "Eclipse Public License"
@@ -12,7 +12,8 @@
              :dev {:plugins [[jonase/eastwood "0.3.5"]
                              [lein-cloverage "1.1.1"]
                              [lein-eftest "0.5.9"]
-                             [lein-kibit "0.1.7"]]
+                             [lein-kibit "0.1.7"]
+                             [com.jakemccrary/lein-test-refresh "0.24.1"]]
                    :eftest {:multithread? false
                             :report eftest.report.junit/report
                             :report-to-file "target/junit.xml"}

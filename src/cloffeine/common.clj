@@ -1,5 +1,6 @@
 (ns cloffeine.common
-  (:import [com.github.benmanes.caffeine.cache Caffeine CacheLoader AsyncCacheLoader]
+  (:import [com.github.benmanes.caffeine.cache Caffeine CacheLoader AsyncCacheLoader Cache]
+           [com.github.benmanes.caffeine.cache.stats CacheStats]
            [java.util.function Function]
            [java.util.concurrent TimeUnit]))
 
@@ -18,6 +19,7 @@
         settings (merge {:timeUnit :s} settings)
         timeUnit (time-unit (:timeUnit settings))]
     (cond-> bldr
+      (:recordStats settings) (.recordStats)
       (:maximumSize settings) (.maximumSize (int (:maximumSize settings)))
       (:expireAfterAccess settings) (.expireAfterAccess (:expireAfterAccess settings) timeUnit)
       (:expireAfterWrite settings) (.expireAfterWrite (:expireAfterWrite settings) timeUnit)
@@ -56,3 +58,24 @@
     (apply [_this t]
       (ifn t))))
 
+(defn cache-stats->map 
+  "Convert CacheStats object readonly attributes to a clojure map
+  see: https://www.javadoc.io/static/com.github.ben-manes.caffeine/caffeine/2.8.0/com/github/benmanes/caffeine/cache/stats/CacheStats.html
+  for actual metrics docs."
+  [^CacheStats cs]
+  {:averageLoadPenalty (.averageLoadPenalty cs)
+   :evictionCount (.evictionCount cs)
+   :evictionWeight (.evictionWeight cs)
+   :hitCount (.hitCount cs)
+   :hitRate (.hitRate cs)
+   :loadCount (.loadCount cs)
+   :loadFailureCount (.loadFailureCount cs)
+   :loadFailureRate (.loadFailureRate cs)
+   :loadSuccessCount (.loadSuccessCount cs)
+   :missCount (.missCount cs)
+   :missRate (.missRate cs)
+   :requestCount (.requestCount cs)
+   :totalLoadTime (.totalLoadTime cs)})
+   
+(defn stats [^Cache c]
+  (cache-stats->map (.stats c)))
