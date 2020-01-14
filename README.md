@@ -6,6 +6,8 @@ Simple clojure wrapper around https://github.com/ben-manes/caffeine cache.
 
 [![Coverage Status](https://coveralls.io/repos/github/AppsFlyer/cloffeine/badge.svg?branch=master)](https://coveralls.io/github/AppsFlyer/cloffeine?branch=master)
 
+add `[com.appsflyer/cloffeine "0.1.2"]` under `:dependencies`
+
 Usage:
 ------
 Manual loading:
