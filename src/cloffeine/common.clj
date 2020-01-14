@@ -1,5 +1,6 @@
 (ns cloffeine.common
-  (:import [com.github.benmanes.caffeine.cache Caffeine CacheLoader AsyncCacheLoader Cache]
+  (:import [com.github.benmanes.caffeine.cache Caffeine CacheLoader AsyncCacheLoader Cache CacheWriter
+            Weigher]
            [com.github.benmanes.caffeine.cache.stats CacheStats]
            [java.util.function Function]
            [java.util.concurrent TimeUnit]))
@@ -18,16 +19,26 @@
   (let [bldr (Caffeine/newBuilder)
         settings (merge {:timeUnit :s} settings)
         timeUnit (time-unit (:timeUnit settings))]
+    (when (and (:recordStats settings)
+               (:statsCounterSupplier settings))
+      (throw (ex-info "Configuration error. :recordStats and :statsCounterSupplier are mutually exclusive" settings)))
     (cond-> bldr
       (:recordStats settings) (.recordStats)
+      (:statsCounterSupplier settings) (.recordStats (:statsCounterSupplier settings))
       (:maximumSize settings) (.maximumSize (int (:maximumSize settings)))
+      (:expireAfter settings) (.expireAfter (:expireAfter settings))
       (:expireAfterAccess settings) (.expireAfterAccess (:expireAfterAccess settings) timeUnit)
       (:expireAfterWrite settings) (.expireAfterWrite (:expireAfterWrite settings) timeUnit)
       (:refreshAfterWrite settings) (.refreshAfterWrite (:refreshAfterWrite settings) timeUnit)
+      (:executor settings) (.executor (:executor settings))
       (:weakKeys settings) (.weakKeys)
       (:weakValues settings) (.weakValues)
       (:initialCapacity settings) (.initialCapacity (int (:initialCapacity settings)))
-      (:softValues settings) (.softValues))))
+      (:softValues settings) (.softValues)
+      (:ticker settings) (.ticker (:ticker settings))
+      (:removalListener settings) (.removalListener (:removalListener settings))
+      (:weigher settings) (.weigher (:weigher settings))
+      (:writer settings) (.writer (:writer settings)))))
 
 (defn reify-async-cache-loader 
   ([loading-fn]
@@ -52,6 +63,18 @@
        (loading-fn k))
      (reload [_this k v]
        (reloading-fn k v)))))
+
+(defn reify-cache-writer [delete-handler write-handler]
+  (reify CacheWriter
+    (delete ^void [this k v removal-cause]
+      (delete-handler this k v removal-cause))
+    (write ^void [this k v]
+      (write-handler this k v))))
+
+(defn reify-weigher [weigh-fn]
+  (reify Weigher
+    (weigh ^Int [this k v]
+      (weigh-fn this k v))))
 
 (defn ifn->function ^Function [ifn]
   (reify Function

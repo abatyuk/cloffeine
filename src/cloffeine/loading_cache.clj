@@ -23,6 +23,11 @@
   ([^Cache lcache k loading-fn]
    (cache/get lcache k loading-fn)))
 
+(defn cleanup [^Cache lcache]
+  (cache/cleanup lcache))
+
 (defn refresh [^LoadingCache lcache k]
   (.refresh lcache k))
 
+(defn get-all [^LoadingCache lcache ks]
+  (into {} (.getAll lcache ks)))

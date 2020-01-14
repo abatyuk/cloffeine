@@ -5,16 +5,32 @@
             [cloffeine.loading-cache :as loading-cache]
             [cloffeine.async-loading-cache :as async-loading-cache]
             [clojure.test :refer [deftest is testing]]
-            [promesa.core :as p]))
+            [promesa.core :as p])
+  (:import [com.google.common.testing FakeTicker]
+           [com.github.benmanes.caffeine.cache Ticker]
+           [java.util.concurrent TimeUnit]))
+
+(defn- reify-ticker [^FakeTicker ft]
+  (reify Ticker
+    (read [_this]
+      (.read ft))))
 
 (deftest manual
   (let [cache (cache/make-cache)]
-    (is (= 0 (.estimatedSize cache)))
+    (is (= 0 (cache/estimated-size cache)))
     (cache/put! cache :key :v)
-    (is (= 1 (.estimatedSize cache)))
+    (is (= 1 (cache/estimated-size cache)))
     (is (= :v (cache/get cache :key name)))
     (cache/invalidate! cache :key)
-    (is (= "key" (cache/get cache :key name)))))
+    (is (= "key" (cache/get cache :key name)))
+    (is (= {:key "key"}
+           (cache/get-all cache [:key] (fn [ks] (reduce 
+                                                  (fn [res k]
+                                                    (assoc res k (name k)))
+                                                  {}
+                                                  ks)))))
+    (cache/invalidate-all! cache)
+    (is (= 0 (cache/estimated-size cache)))))
 
 (deftest loading
   (let [loads (atom 0)
@@ -45,7 +61,9 @@
 (deftest get-if-present
   (let [cache (cache/make-cache)]
     (cache/put! cache :key "v")
+    (cache/put! cache :key2 "v2")
     (is (= "v" (cache/get-if-present cache :key)))
+    (is (= {:key "v"} (cache/get-all-present cache [:key "v2"])))
     (is (nil? (cache/get-if-present cache :non-existent))))
   (let [loading-cache (loading-cache/make-cache (common/reify-cache-loader str))]
     (loading-cache/put! loading-cache :key "v")
@@ -117,81 +135,100 @@
       (is (= "key2" (loading-cache/get alcache2 :key2)))
       (is (= 3 @loads)))))
 
-(deftest async-auto-refresh
+(deftest auto-refresh
   (let [loads (atom 0)
         reloads (atom 0)
-        load-fails? (atom false)
         reload-fails? (atom false)
+        db (atom {:key 17})
         cl (common/reify-cache-loader
              (fn [k]
-               (if @load-fails?
-                 (throw (Exception. (format "load failed for key: %s" k)))
-                 (do
-                   (swap! loads inc)
-                   (name k))))
-             (fn [k old-v]
+               (swap! loads inc)
+               (get @db k))
+             (fn [k _old-v]
+               (swap! reloads inc)
                (if @reload-fails?
-                 old-v
-                 (do
-                   (swap! reloads inc)
-                   (name k)))))
-        alcache (async-loading-cache/make-cache cl {:refreshAfterWrite 1 :timeUnit :s})]
+                 (throw (Exception. (format "reload failed for key: %s" k)))
+                 (get @db k))))
+        ticker (FakeTicker.)
+        lcache (loading-cache/make-cache cl {:refreshAfterWrite 10
+                                             :timeUnit :s
+                                             :ticker (reify-ticker ticker)})]
     (testing "no key, load succeeds"
-      (is (= "key" @(async-loading-cache/get alcache :key)))
+      (is (= 17 (loading-cache/get lcache :key)))
       (is (= 1 @loads))
       (is (= 0 @reloads)))
     (testing "key exists, just return from cache"
-      (is (= "key" @(async-loading-cache/get alcache :key)))
+      (is (= 17 (loading-cache/get lcache :key)))
       (is (= 1 @loads))
       (is (= 0 @reloads)))
-    (testing "key needs to be refreshed, but reload fails"
+    (testing "key needs to be refreshed"
+      (swap! db assoc :key 42)
+      (.advance ticker 11 TimeUnit/SECONDS)
+      (is (= 17 (loading-cache/get lcache :key)))
+      (is (= 1 @loads))
+      (loading-cache/cleanup lcache)
+      (Thread/sleep 10)
+      (is (= 1 @reloads))
+      (is (= 42 (loading-cache/get lcache :key))))
+    (testing "time to refresh again, but reload fails"
       (reset! reload-fails? true)
-      (Thread/sleep 1100)
-      (is (= "key" @(async-loading-cache/get alcache :key)))
-      (is (= 1 @loads))
-      (is (= 0 @reloads)))
-    (testing "reloads succeeds, time to refresh again"
+      (swap! db assoc :key 43)
+      (.advance ticker 10 TimeUnit/SECONDS)
+      (is (= 42 (loading-cache/get lcache :key)))
+      (is (= 1 @reloads))
+      (is (= 42 (loading-cache/get lcache :key)))
+      (is (= 1 @reloads))
       (reset! reload-fails? false)
-      (Thread/sleep 1000)
-      (is (= "key" @(async-loading-cache/get alcache :key)))
-      (is (= 1 @reloads)))))
+      (.advance ticker 10 TimeUnit/SECONDS)
+      (is (= 42 (loading-cache/get lcache :key)))
+      (loading-cache/cleanup lcache)
+      (Thread/sleep 10)
+      (is (= 2 @reloads))
+      (is (= 43 (loading-cache/get lcache :key)))
+      (is (= 2 @reloads)))))
 
 (deftest async-auto-async-refresh
   (let [loads (atom 0)
         reloads (atom 0)
-        load-fails? (atom false)
         reload-fails? (atom false)
+        db (atom {:key 17})
         acl (common/reify-async-cache-loader
               (fn [k _executor]
-                (if @load-fails?
-                  (p/rejected (Exception. (format "load failed for key: %s" k)))
-                  (do
-                    (swap! loads inc)
-                    (p/resolved (name k)))))
-              (fn [k old-v _executor]
+                  (swap! loads inc)
+                  (p/resolved (get @db k)))
+              (fn [k _old-v _executor]
+                (swap! reloads inc)
                 (if @reload-fails?
-                  (p/resolved old-v)
-                  (do
-                    (swap! reloads inc)
-                    (p/resolved (name k))))))
-        alcache (async-loading-cache/make-cache-async-loader acl {:refreshAfterWrite 1 :timeUnit :s})]
+                  (p/resolved (ex-info "error" {}))
+                  (p/resolved (get @db k)))))
+        ticker (FakeTicker.)
+        alcache (async-loading-cache/make-cache-async-loader acl {:refreshAfterWrite 10 
+                                                                  :timeUnit :s
+                                                                  :ticker (reify-ticker ticker)})]
     (testing "no key, load succeeds"
-      (is (= "key" @(async-loading-cache/get alcache :key)))
+      (is (= 17 @(async-loading-cache/get alcache :key)))
       (is (= 1 @loads))
       (is (= 0 @reloads)))
     (testing "key exists, just return from cache"
-      (is (= "key" @(async-loading-cache/get alcache :key)))
+      (is (= 17 @(async-loading-cache/get alcache :key)))
       (is (= 1 @loads))
       (is (= 0 @reloads)))
-    (testing "key needs to be refreshed, but reload fails"
+    (testing "key needs to be refreshed"
+      (swap! db assoc :key 42)
+      (.advance ticker 11 TimeUnit/SECONDS)
+      (is (= 17 @(async-loading-cache/get alcache :key)))
+      (is (= 1 @loads))
+      (is (= 1 @reloads))
+      (is (= 42 @(async-loading-cache/get alcache :key))))
+    (testing "time to refresh again but relaod fails"
       (reset! reload-fails? true)
-      (Thread/sleep 1100)
-      (is (= "key" @(async-loading-cache/get alcache :key)))
-      (is (= 1 @loads))
-      (is (= 0 @reloads)))
-    (testing "reloads succeeds, time to refresh again"
+      (swap! db assoc :key 43)
+      (.advance ticker 10 TimeUnit/SECONDS)
+      (is (= 42 @(async-loading-cache/get alcache :key)))
+      (is (= 1 @reloads))
       (reset! reload-fails? false)
-      (Thread/sleep 1000)
-      (is (= "key" @(async-loading-cache/get alcache :key)))
-      (is (= 1 @reloads)))))
+      (.advance ticker 10 TimeUnit/SECONDS)
+      (is (= 42 @(async-loading-cache/get alcache :key)))
+      (is (= 2 @reloads))
+      (is (= 43 @(async-loading-cache/get alcache :key))))))
   
