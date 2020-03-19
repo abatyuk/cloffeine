@@ -5,7 +5,8 @@
             [cloffeine.loading-cache :as loading-cache]
             [cloffeine.async-loading-cache :as async-loading-cache]
             [clojure.test :refer [deftest is testing]]
-            [promesa.core :as p])
+            [promesa.core :as p]
+            [clojure.string :as s])
   (:import [com.google.common.testing FakeTicker]
            [com.github.benmanes.caffeine.cache Ticker]
            [java.util.concurrent TimeUnit]))
@@ -40,15 +41,15 @@
         lcache (loading-cache/make-cache cl {:recordStats true})]
     (loading-cache/put! lcache :key :v)
     (is (= :v (loading-cache/get lcache :key)))
-    (= 1 (:hitCount (common/stats lcache)))
-    (= 1 (:requestCount (common/stats lcache)))
+    (is (= 1 (:hitCount (common/stats lcache))))
+    (is (= 1 (:requestCount (common/stats lcache))))
     (is (= 0 @loads))
     (loading-cache/invalidate! lcache :key)
     (is (= "key" (loading-cache/get lcache :key)))
-    (= 2 (:requestCount (common/stats lcache)))
-    (= 1 (:loadCount (common/stats lcache)))
-    (= 0.5 (:hitRate (common/stats lcache)))
-    (= 0.5 (:missRate (common/stats lcache)))
+    (is (= 2 (:requestCount (common/stats lcache))))
+    (is (= 1 (:loadCount (common/stats lcache))))
+    (is (= 0.5 (:hitRate (common/stats lcache))))
+    (is (= 0.5 (:missRate (common/stats lcache))))
     (is (= 1 @loads))
     (is (= "key" (loading-cache/get lcache :key name)))
     (is (= 1 @loads))
@@ -232,3 +233,18 @@
       (is (= 2 @reloads))
       (is (= 43 @(async-loading-cache/get alcache :key))))))
   
+(deftest compute
+  (let [c (cache/make-cache)
+        k "key"
+        remapper (fn [_k v]
+                   (if (some? v)
+                     (str v "bar")
+                     "foo"))]
+    (cache/put! c k "foo")
+    (is (= "foobar" (cache/compute c k remapper)))
+    (doall 
+      (pmap (fn [_]
+              (cache/compute c k remapper))
+            (range 100)))
+    (let [expected (s/join (concat ["foobar"] (repeat 100 "bar")))]
+      (is (= expected (cache/get-if-present c k))))))
