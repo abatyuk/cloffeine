@@ -2,7 +2,7 @@
   (:import [com.github.benmanes.caffeine.cache Caffeine CacheLoader AsyncCacheLoader Cache CacheWriter
             Weigher]
            [com.github.benmanes.caffeine.cache.stats CacheStats]
-           [java.util.function Function]
+           [java.util.function Function BiFunction]
            [java.util.concurrent TimeUnit]))
 
 (defn time-unit
@@ -80,6 +80,11 @@
   (reify Function
     (apply [_this t]
       (ifn t))))
+
+(defn ifn->bifunction ^BiFunction [ifn]
+  (reify BiFunction
+    (apply [_this t u]
+      (ifn t u))))
 
 (defn cache-stats->map 
   "Convert CacheStats object readonly attributes to a clojure map

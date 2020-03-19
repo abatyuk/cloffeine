@@ -1,9 +1,9 @@
-(defproject com.appsflyer/cloffeine "0.1.2" 
+(defproject com.appsflyer/cloffeine "0.1.3" 
   :description "A warpper over https://github.com/ben-manes/caffeine"
   :url "https://github.com/AppsFlyer/cloffeine"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[com.github.ben-manes.caffeine/caffeine "2.8.0"]]
+  :dependencies [[com.github.ben-manes.caffeine/caffeine "2.8.1"]]
   :plugins [[lein-codox "0.10.5"]]
   :codox {:output-path "codox"
           :source-uri "http://github.com/AppsFlyer/cloffeine/blob/{version}/{filepath}#L{line}"
@@ -20,7 +20,6 @@
                             :report-to-file "target/junit.xml"}
                    :dependencies [[org.clojure/clojure "1.10.1"]
                                   [criterium "0.4.5"]
-                                  [citius "0.2.4"]
                                   [cheshire "5.9.0"]
                                   [com.taoensso/timbre "4.10.0"]
                                   [clj-kondo "RELEASE"]
