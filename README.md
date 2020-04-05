@@ -1,3 +1,5 @@
+This code is no longer maintained - please check [new repository](https://github.com/AppsFlyer/cloffeine)
+
 # Cloffeine 
 
 Simple clojure wrapper around https://github.com/ben-manes/caffeine cache.
