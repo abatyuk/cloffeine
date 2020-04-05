@@ -69,7 +69,7 @@
     (is (= "key" (cache/get lcache :key name)))
     (is (= 1 @loads))))
 
-(deftest ^:test-refresh/focus loading-exceptions
+(deftest loading-exceptions
   (let [loads (atom 0)
         throw? (atom false)
         cl (common/reify-cache-loader (fn [k]
