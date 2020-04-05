@@ -6,23 +6,18 @@
             [cloffeine.async-loading-cache :as async-loading-cache]
             [clojure.test :refer [deftest is testing use-fixtures]]
             [promesa.core :as p]
-            [clojure.string :as s]
-            [taoensso.timbre :as timbre])
+            [clojure.string :as s])
   (:import [com.google.common.testing FakeTicker]
            [com.github.benmanes.caffeine.cache Ticker]
-           [java.util.concurrent TimeUnit]))
-
-;; (defn- silence-logs [t]
-;;   (timbre/merge-config! {:output-fn (constantly nil)})
-;;   (t))
-;; (timbre/merge-config! {:appenders {:spit {:enabled? false}}})
+           [java.util.concurrent TimeUnit]
+           [java.util.logging Logger Level]))
 
 (defn configure-logger [test-fn]
-  (let [initial-config timbre/*config*]
-    (timbre/merge-config! {:appenders {:spit {:enabled? false}}})
-    ;; (prn timbre/*config*)
+  (let [logger (Logger/getLogger "com.github.benmanes.caffeine")
+        initial-level (.getLevel logger)]
+    (.setLevel logger (Level/SEVERE))
     (test-fn)
-    (timbre/set-config! initial-config)))
+    (.setLevel logger initial-level)))
 
 (use-fixtures :each configure-logger)
 
@@ -82,7 +77,6 @@
                                           (throw (ex-info "fail" {}))
                                           (do
                                             (swap! loads inc)
-                                            (prn (format "loading: %s for %s" (name k) k))
                                             (name k)))))
         ticker (FakeTicker.)
         lcache (loading-cache/make-cache cl {:refreshAfterWrite 10
