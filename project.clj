@@ -24,8 +24,6 @@
                                   [com.taoensso/timbre "4.10.0"]
                                   [clj-kondo "RELEASE"]
                                   [funcool/promesa "4.0.2"]
-                                  [com.google.guava/guava-testlib "28.1-jre"] 
-                                  [org.slf4j/jul-to-slf4j "1.7.30"]
-                                  [com.fzakaria/slf4j-timbre "0.3.19"]]
+                                  [com.google.guava/guava-testlib "28.1-jre"]] 
                    :aliases {"clj-kondo" ["run" "-m" "clj-kondo.main"]}
                    :global-vars {*warn-on-reflection* true}}})
