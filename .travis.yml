@@ -1,0 +1,15 @@
+language: clojure
+lein: 2.6.1 # version 2 and up
+jdk:
+- openjdk8
+after_script:
+  - bash -ex test/coveralls.sh
+jobs:
+    include:
+        - stage: lint
+          script: lein clj-kondo --lint src test --cache false
+        - stage: test
+          script: lein eftest
+notifications:
+  recipients:
+    - ido@appsflyer.com
